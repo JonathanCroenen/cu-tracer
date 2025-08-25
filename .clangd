@@ -1,0 +1,16 @@
+CompileFlags:
+  Add:
+    - -xcuda                  
+    - --cuda-path=/usr/local/cuda-13.0
+    - --cuda-gpu-arch=sm_75   
+    - -I/usr/local/cuda-13.0/include
+    - -I/usr/local/cuda-13.0/include/cccl
+    - -I/usr/local/cuda-13.0/include/cccl/cuda
+    - -I/usr/local/cuda-13.0/include/cccl/cuda/std
+    - -D__CUDACC__           
+  Remove:
+    - -forward-unknown-to-host-compiler
+    - --generate-code=*
+    - -rdc=true 
+    - -ccbin*
+    - --compiler-options*

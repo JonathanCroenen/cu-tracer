@@ -1,0 +1,94 @@
+# Build directories
+build/
+bin/
+lib/
+out/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# CUDA specific
+*.cubin
+*.ptx
+*.cudafe1.c
+*.cudafe2.c
+*.cudafe1.cpp
+*.cudafe2.cpp
+*.cudafe1.gpu
+*.cudafe2.gpu
+*.cudafe1.ptx
+*.cudafe2.ptx
+*.cudafe1.sm_*
+*.cudafe2.sm_*
+*.cudafe1.stub.c
+*.cudafe2.stub.c
+*.cudafe1.fatbin
+*.cudafe2.fatbin
+*.cudafe1.fatbin.c
+*.cudafe2.fatbin.c
+*.cudafe1.cudafe1
+*.cudafe2.cudafe2
+*.cudafe1.cubin
+*.cudafe2.cubin
+*.cudafe1.ptx
+*.cudafe2.ptx
+*.cudafe1.sm_*
+*.cudafe2.sm_*
+*.cudafe1.stub.c
+*.cudafe2.stub.c
+*.cudafe1.fatbin
+*.cudafe2.fatbin
+*.cudafe1.fatbin.c
+*.cudafe2.fatbin.c
+*.cudafe1.cudafe1
+*.cudafe2.cudafe2
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp

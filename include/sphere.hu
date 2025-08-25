@@ -1,0 +1,49 @@
+#pragma once
+
+#include "hit.hu"
+#include "managed.hu"
+#include "material.hu"
+#include "math.hu"
+#include "ray.hu"
+
+namespace rt {
+
+class Sphere : public Managed {
+   public:
+    Vec3f center;
+    float radius;
+    Material* material;
+
+    DEVICE_HOST
+    Sphere() : center(Vec3f(0, 0, 0)), radius(1.0f), material(nullptr) {}
+
+    DEVICE_HOST
+    Sphere(const Vec3f& c, float r, Material* m) : center(c), radius(r), material(m) {}
+
+    DEVICE
+    bool Hit(const Ray& ray, float t_min, float t_max, Hit& hit) const {
+        Vec3f oc = ray.origin - center;
+        float half_b = oc.Dot(ray.direction);
+        float c = oc.LengthSquared() - radius * radius;
+        float discriminant = half_b * half_b - c;
+
+        if (discriminant < 0) return false;
+        float sqrt_d = sqrtf(discriminant);
+
+        // Find the nearest root that lies in the acceptable range.
+        float root = (-half_b - sqrt_d);
+        if (root < t_min || root > t_max) {
+            root = (-half_b + sqrt_d);
+            if (root < t_min || root > t_max) return false;
+        }
+
+        hit.t = root;
+        hit.point = ray.At(hit.t);
+        Vec3f outward_normal = (hit.point - center) / radius;
+        hit.SetFaceNormal(ray, outward_normal);
+        hit.material = material;
+        return true;
+    }
+};
+
+}  // namespace rt

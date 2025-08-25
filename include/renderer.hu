@@ -1,0 +1,35 @@
+#pragma once
+
+#include <cuda_runtime.h>
+#include <curand_kernel.h>
+#include "camera.hu"
+#include "framebuffer.hu"
+#include "math.hu"
+#include "sphere.hu"
+
+namespace rt {
+
+class Renderer {
+   public:
+    int width;
+    int height;
+    int max_bounces;
+    int sample_count;
+
+    Renderer(int width, int height, int max_bounces);
+    ~Renderer();
+
+    bool Init();
+    void Cleanup();
+    void RenderFrame(Framebuffer& framebuffer, const Camera& camera, const Sphere* spheres,
+                     int num_spheres);
+    void ClearAccumulator();
+
+   private:
+    curandState* _device_random_states;
+    Vec3f* _device_accumulator;
+
+    void InitRandomStates();
+};
+
+}  // namespace rt
