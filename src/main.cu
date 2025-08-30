@@ -12,11 +12,12 @@ const int WINDOW_HEIGHT = 600;
 
 std::unique_ptr<rt::Scene> CreateRTInOneWeekendScene() {
     auto scene = rt::Scene::Create();
-    rt::MaterialRef ground = scene->AddMaterial(rt::Metal(rt::Vec3f(0.8f, 0.8f, 0.0f), 1.0f));
+    rt::MaterialRef ground = scene->AddMaterial(rt::Lambertian(rt::Vec3f(0.8f, 0.8f, 0.0f)));
     rt::MaterialRef center = scene->AddMaterial(rt::Metal(rt::Vec3f(0.1f, 0.2f, 0.5f), 1.0f));
-    rt::MaterialRef left = scene->AddMaterial(rt::Dielectric(rt::Vec3f(1.0f, 1.0f, 1.0f), 1.5f));
-    rt::MaterialRef bubble =
-        scene->AddMaterial(rt::Dielectric(rt::Vec3f(1.0f, 1.0f, 1.0f), 1.0f / 1.5f));
+    // Clear glass with slight surface imperfections
+    rt::MaterialRef left = scene->AddMaterial(rt::Dielectric(1.5f, 0.02f, 0.01f));
+    // Bubble with very smooth surfaces
+    rt::MaterialRef bubble = scene->AddMaterial(rt::Dielectric(1.0f / 1.5f, 0.0f, 0.0f));
     rt::MaterialRef right = scene->AddMaterial(rt::Metal(rt::Vec3f(0.8f, 0.6f, 0.2f), 0.0f));
 
     scene->AddObject(rt::Sphere(rt::Vec3f(0.0f, -100.5f, -1.0f), 100.0f), ground);
@@ -38,44 +39,30 @@ std::unique_ptr<rt::Scene> CreateRTInOneWeekendScene() {
 std::unique_ptr<rt::Scene> CreateCornellBoxScene() {
     auto scene = rt::Scene::Create();
 
-    // Materials
-    rt::MaterialRef red = scene->AddMaterial(rt::Metal(rt::Vec3f(0.65f, 0.05f, 0.05f), 1.0f));
-    rt::MaterialRef green = scene->AddMaterial(rt::Metal(rt::Vec3f(0.12f, 0.45f, 0.15f), 1.0f));
-    rt::MaterialRef white = scene->AddMaterial(rt::Metal(rt::Vec3f(0.73f, 0.73f, 0.73f), 1.0f));
-    rt::MaterialRef light = scene->AddMaterial(rt::Emissive(rt::Vec3f(1.0f, 1.0f, 1.0f), 50.0f));
+    rt::MaterialRef red = scene->AddMaterial(rt::Lambertian(rt::Vec3f(0.65f, 0.05f, 0.05f)));
+    rt::MaterialRef green = scene->AddMaterial(rt::Lambertian(rt::Vec3f(0.12f, 0.45f, 0.15f)));
+    rt::MaterialRef white = scene->AddMaterial(rt::Lambertian(rt::Vec3f(0.73f, 0.73f, 0.73f)));
+    rt::MaterialRef light = scene->AddMaterial(rt::Emissive(rt::Vec3f(1.0f, 1.0f, 1.0f), 10.0f));
     rt::MaterialRef metal = scene->AddMaterial(rt::Metal(rt::Vec3f(0.8f, 0.85f, 0.88f), 0.0f));
-    rt::MaterialRef glass = scene->AddMaterial(rt::Dielectric(rt::Vec3f(1.0f, 1.0f, 1.0f), 1.5f));
-    rt::MaterialRef fuzz = scene->AddMaterial(rt::Metal(rt::Vec3f(0.8f, 0.6f, 0.2f), 1.0f));
+    // Clear glass with slight surface roughness
+    rt::MaterialRef glass = scene->AddMaterial(rt::Dielectric(1.5f, 0.03f, 0.02f));
+    rt::MaterialRef fuzz = scene->AddMaterial(rt::Metal(rt::Vec3f(0.8f, 0.6f, 0.2f), 0.6f));
 
-    // Cornell box using Plane objects for the walls
-    // Floor (y = -0.5)
     scene->AddObject(rt::Plane(rt::Vec3f(0.0f, -0.5f, 0.0f), rt::Vec3f(0.0f, 1.0f, 0.0f)), white);
-    // Ceiling (y = 0.5)
     scene->AddObject(rt::Plane(rt::Vec3f(0.0f, 0.5f, 0.0f), rt::Vec3f(0.0f, -1.0f, 0.0f)), white);
-    // Back wall (z = -1.0)
     scene->AddObject(rt::Plane(rt::Vec3f(0.0f, 0.0f, -1.0f), rt::Vec3f(0.0f, 0.0f, 1.0f)), white);
-    // Left wall (x = -0.5, red)
     scene->AddObject(rt::Plane(rt::Vec3f(-0.5f, 0.0f, 0.0f), rt::Vec3f(1.0f, 0.0f, 0.0f)), red);
-    // Right wall (x = 0.5, green)
     scene->AddObject(rt::Plane(rt::Vec3f(0.5f, 0.0f, 0.0f), rt::Vec3f(-1.0f, 0.0f, 0.0f)), green);
 
-    // Ceiling light (small emissive sphere near the ceiling)
     scene->AddObject(rt::Sphere(rt::Vec3f(0.0f, 1.09f, 0.0f), 0.6f), light);
-
-    // Metal sphere
-    scene->AddObject(rt::Sphere(rt::Vec3f(-0.2f, -0.3f, -0.6f), 0.1f), metal);
-
-    // Dielectric (glass) sphere
-    scene->AddObject(rt::Sphere(rt::Vec3f(0.0f, -0.15f, 0.0f), 0.15f), glass);
-
-    // Fuzzy metal (lambertian-like) sphere
+    scene->AddObject(rt::Sphere(rt::Vec3f(0.0f, 0.2f, -0.6f), 0.1f), metal);
+    scene->AddObject(rt::Sphere(rt::Vec3f(-0.2f, -0.15f, 0.0f), 0.12f), glass);
+    scene->AddObject(rt::Sphere(rt::Vec3f(0.0f, 0.0f, 1.8f), 0.12f), glass);
     scene->AddObject(rt::Sphere(rt::Vec3f(0.2f, -0.35f, -0.3f), 0.1f), fuzz);
-
-    // Camera
     scene->SetCamera(rt::Camera(rt::Vec3f(0.0f, 0.0f, 2.5f),  // look from
                                 rt::Vec3f(0.0f, 0.0f, 0.0f),  // look at
                                 rt::Vec3f(0.0f, 1.0f, 0.0f),  // up
-                                40.0f,                        // vfov
+                                30.0f,                        // vfov
                                 float(WINDOW_WIDTH) / float(WINDOW_HEIGHT)));
 
     return scene;

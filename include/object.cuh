@@ -52,7 +52,7 @@ struct Plane {
     Plane() : point(Vec3f(0, 0, 0)), normal(Vec3f(0, 1, 0)) {}
 
     DEVICE_HOST
-    Plane(const Vec3f& p, const Vec3f& n) : point(p), normal(n) {}
+    Plane(const Vec3f& p, const Vec3f& n) : point(p), normal(n.Normalized()) {}
 
     DEVICE_HOST
     Plane(const Vec3f& p0, const Vec3f& p1, const Vec3f& p2)
@@ -61,7 +61,7 @@ struct Plane {
     DEVICE_HOST
     bool Hit(const Ray& ray, float t_min, float t_max, Hit& hit) const {
         float denom = ray.direction.Dot(normal);
-        if (denom > -epsilon && denom < epsilon) return false;
+        if (denom >= 0.0f) return false;
 
         float t = (point - ray.origin).Dot(normal) / denom;
         if (t < t_min || t > t_max) return false;
@@ -78,11 +78,15 @@ struct Triangle {
     Vec3f p1;
     Vec3f p2;
 
-    DEVICE_HOST
-    Triangle() : p0(Vec3f(0, 0, 0)), p1(Vec3f(0, 0, 0)), p2(Vec3f(0, 0, 0)) {}
+    Vec3f normal;
 
     DEVICE_HOST
-    Triangle(const Vec3f& p0, const Vec3f& p1, const Vec3f& p2) : p0(p0), p1(p1), p2(p2) {}
+    Triangle()
+        : p0(Vec3f(0, 0, 0)), p1(Vec3f(0, 0, 0)), p2(Vec3f(0, 0, 0)), normal(Vec3f(0, 0, 0)) {}
+
+    DEVICE_HOST
+    Triangle(const Vec3f& p0, const Vec3f& p1, const Vec3f& p2)
+        : p0(p0), p1(p1), p2(p2), normal((p1 - p0).Cross(p2 - p0).Normalized()) {}
 
     DEVICE_HOST
     bool Hit(const Ray& ray, float t_min, float t_max, Hit& hit) const {
@@ -108,7 +112,7 @@ struct Triangle {
 
         hit.t = t;
         hit.point = ray.At(t);
-        hit.SetFaceNormal(ray, (p1 - p0).Cross(p2 - p0).Normalized());
+        hit.SetFaceNormal(ray, normal);
         return true;
     }
 };

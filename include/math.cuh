@@ -39,6 +39,37 @@ using Transformf = Transform<float>;
 using Transformd = Transform<double>;
 
 // ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+template <typename T>
+DEVICE_HOST T Min(T a, T b) {
+    return a < b ? a : b;
+}
+
+template <typename T>
+DEVICE_HOST T Max(T a, T b) {
+    return a > b ? a : b;
+}
+
+// Scalar operations
+template <typename T>
+DEVICE_HOST T Clamp(T value, T min, T max) {
+    return Min(Max(value, min), max);
+}
+
+template <typename T>
+DEVICE_HOST T Lerp(T a, T b, T t) {
+    return a + t * (b - a);
+}
+
+template <typename T>
+DEVICE_HOST T Smoothstep(T edge0, T edge1, T x) {
+    T t = Clamp((x - edge0) / (edge1 - edge0), T(0), T(1));
+    return t * t * (T(3) - T(2) * t);
+}
+
+// ============================================================================
 // VECTOR CLASSES
 // ============================================================================
 
@@ -147,6 +178,10 @@ struct Vec2 {
     DEVICE_HOST Vec2<T> Normalized() const {
         T len = Length();
         return len > 0 ? *this / len : *this;
+    }
+
+    DEVICE_HOST Vec2<T> Clamped(T min, T max) const {
+        return Vec2<T>(Clamp(x, min, max), Clamp(y, min, max));
     }
 
     // Static constructors
@@ -276,6 +311,10 @@ struct Vec3 {
     DEVICE_HOST Vec3<T> Normalized() const {
         T len = Length();
         return len > 0 ? *this / len : *this;
+    }
+
+    DEVICE_HOST Vec3<T> Clamped(T min, T max) const {
+        return Vec3<T>(Clamp(x, min, max), Clamp(y, min, max), Clamp(z, min, max));
     }
 
     DEVICE_HOST Vec3<T> Reflect(const Vec3<T>& normal) const {
@@ -423,6 +462,11 @@ struct Vec4 {
     DEVICE_HOST Vec4<T> Normalized() const {
         T len = Length();
         return len > 0 ? *this / len : *this;
+    }
+
+    DEVICE_HOST Vec4<T> Clamped(T min, T max) const {
+        return Vec4<T>(Clamp(x, min, max), Clamp(y, min, max), Clamp(z, min, max),
+                       Clamp(w, min, max));
     }
 
     // Static constructors
@@ -772,60 +816,6 @@ struct Transform {
 };
 
 // ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-// Scalar operations
-template <typename T>
-DEVICE_HOST T Clamp(T value, T min, T max) {
-    return std::max(min, std::min(max, value));
-}
-
-template <typename T>
-DEVICE_HOST T Lerp(T a, T b, T t) {
-    return a + t * (b - a);
-}
-
-template <typename T>
-DEVICE_HOST T Smoothstep(T edge0, T edge1, T x) {
-    T t = Clamp((x - edge0) / (edge1 - edge0), T(0), T(1));
-    return t * t * (T(3) - T(2) * t);
-}
-
-// Random number generation
-inline DEVICE float RandomFloat(curandState* random_state) {
-    return curand_uniform(random_state);
-}
-
-inline DEVICE float RandomFloat(curandState* random_state, float min, float max) {
-    return min + RandomFloat(random_state) * (max - min);
-}
-
-inline DEVICE Vec3f RandomUnitVector(curandState* random_state) {
-    float a = RandomFloat(random_state, 0, 2 * M_PI);
-    float z = RandomFloat(random_state, -1, 1);
-    float r = sqrt(1 - z * z);
-    return Vec3f(r * cos(a), r * sin(a), z);
-}
-
-inline DEVICE Vec3f RandomInUnitSphere(curandState* random_state) {
-    Vec3f p;
-    do {
-        p = Vec3f(RandomFloat(random_state, -1, 1), RandomFloat(random_state, -1, 1),
-                  RandomFloat(random_state, -1, 1));
-    } while (p.LengthSquared() >= 1);
-    return p;
-}
-
-inline DEVICE Vec3f RandomInUnitDisk(curandState* random_state) {
-    Vec3f p;
-    do {
-        p = Vec3f(RandomFloat(random_state, -1, 1), RandomFloat(random_state, -1, 1), 0);
-    } while (p.LengthSquared() >= 1);
-    return p;
-}
-
-// ============================================================================
 // OPERATOR OVERLOADS FOR SCALAR OPERATIONS
 // ============================================================================
 
@@ -878,6 +868,42 @@ DEVICE_HOST Vec4<T> operator*(T scalar, const Vec4<T>& vec) {
 template <typename T>
 DEVICE_HOST Vec4<T> operator/(T scalar, const Vec4<T>& vec) {
     return Vec4<T>(scalar / vec.x, scalar / vec.y, scalar / vec.z, scalar / vec.w);
+}
+
+// ============================================================================
+// RANDOM NUMBER GENERATION
+// ============================================================================
+
+inline DEVICE float RandomFloat(curandState* random_state) {
+    return curand_uniform(random_state);
+}
+
+inline DEVICE float RandomFloat(curandState* random_state, float min, float max) {
+    return min + RandomFloat(random_state) * (max - min);
+}
+
+inline DEVICE Vec3f RandomUnitVector(curandState* random_state) {
+    float a = RandomFloat(random_state, 0, 2 * M_PI);
+    float z = RandomFloat(random_state, -1, 1);
+    float r = sqrt(1 - z * z);
+    return Vec3f(r * cos(a), r * sin(a), z);
+}
+
+inline DEVICE Vec3f RandomInUnitSphere(curandState* random_state) {
+    Vec3f p;
+    do {
+        p = Vec3f(RandomFloat(random_state, -1, 1), RandomFloat(random_state, -1, 1),
+                  RandomFloat(random_state, -1, 1));
+    } while (p.LengthSquared() >= 1);
+    return p;
+}
+
+inline DEVICE Vec3f RandomInUnitDisk(curandState* random_state) {
+    Vec3f p;
+    do {
+        p = Vec3f(RandomFloat(random_state, -1, 1), RandomFloat(random_state, -1, 1), 0);
+    } while (p.LengthSquared() >= 1);
+    return p;
 }
 
 // ============================================================================

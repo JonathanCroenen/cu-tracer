@@ -9,14 +9,28 @@
 
 namespace rt {
 
+struct Lambertian {
+    Vec3f albedo;
+
+    DEVICE_HOST
+    Lambertian(const Vec3f& albedo) : albedo(albedo) {}
+
+    DEVICE
+    bool Scatter(const Rayf& ray, const Hit& hit, Vec3f& attenuation, Rayf& scattered,
+                 curandState* random_state) const {
+        Vec3f target = hit.point + hit.normal + RandomInUnitSphere(random_state);
+        scattered = Rayf(hit.point, target - hit.point);
+        attenuation = albedo;
+        return true;
+    }
+};
+
 struct Metal {
     Vec3f albedo;
     float fuzz;
 
     DEVICE_HOST
     Metal(const Vec3f& albedo, float fuzz) : albedo(albedo), fuzz(fuzz) {}
-    Metal(const Metal& other) = default;
-    Metal(Metal&& other) = default;
 
     DEVICE
     bool Scatter(const Rayf& ray, const Hit& hit, Vec3f& attenuation, Rayf& scattered,
@@ -33,58 +47,78 @@ struct Metal {
 };
 
 struct Dielectric {
-    Vec3f albedo;
-    float refractive_index;
+    float ior;                    // Index of refraction
+    float reflection_smoothness;  // Controls diffusion of reflected rays
+    float refraction_smoothness;  // Controls diffusion of refracted rays
 
     DEVICE_HOST
-    Dielectric(const Vec3f& albedo, float refractive_index)
-        : albedo(albedo), refractive_index(refractive_index) {}
-    Dielectric(const Dielectric& other) = default;
-    Dielectric(Dielectric&& other) = default;
+    Dielectric(float refractive_index, float refl_smoothness = 0.0f, float refr_smoothness = 0.0f)
+        : ior(refractive_index), reflection_smoothness(refl_smoothness),
+          refraction_smoothness(refr_smoothness) {}
 
     DEVICE
-    float Schlick(float cosine) const {
-        float r0 = (1 - refractive_index) / (1 + refractive_index);
+    static float Reflectance(float cosine, float ior) {
+        // Schlick's approximation for Fresnel reflectance
+        float r0 = (1.0f - ior) / (1.0f + ior);
         r0 = r0 * r0;
-        return r0 + (1 - r0) * pow(1 - cosine, 5);
+        return r0 + (1.0f - r0) * pow(1.0f - cosine, 5.0f);
     }
 
     DEVICE
-    bool Refract(const Vec3f& v, const Vec3f& n, float ni_over_nt, Vec3f& refracted) const {
-        Vec3f uv = v.Normalized();
-        float dt = uv.Dot(n);
-        float discriminant = 1 - ni_over_nt * ni_over_nt * (1 - dt * dt);
+    static bool Refract(const Vec3f& incident, const Vec3f& normal, float ni_over_nt,
+                        Vec3f& refracted) {
+        Vec3f uv = incident.Normalized();
+        float cos_theta_i = -uv.Dot(normal);
+        float sin2_theta_t = ni_over_nt * ni_over_nt * (1.0f - cos_theta_i * cos_theta_i);
 
-        if (discriminant > 0) {
-            refracted = ni_over_nt * uv - (ni_over_nt * dt + sqrt(discriminant)) * n;
-            return true;
+        if (sin2_theta_t > 1.0f) {
+            return false;  // Total internal reflection
         }
 
-        return false;
+        float cos_theta_t = sqrt(1.0f - sin2_theta_t);
+        refracted = ni_over_nt * uv + (ni_over_nt * cos_theta_i - cos_theta_t) * normal;
+        return true;
+    }
+
+    DEVICE
+    static Vec3f AddDiffusion(const Vec3f& direction, float smoothness, curandState* random_state) {
+        if (smoothness <= 0.0f) return direction;
+
+        Vec3f diffused = direction + RandomInUnitSphere(random_state) * smoothness;
+        return diffused.Normalized();
     }
 
     DEVICE
     bool Scatter(const Rayf& ray, const Hit& hit, Vec3f& attenuation, Rayf& scattered,
                  curandState* random_state) const {
-        Vec3f reflected = ray.direction.Reflect(hit.normal);
-        float ni_over_nt = hit.front_face ? (refractive_index / 1.0f) : (1.0f / refractive_index);
+        attenuation = Vec3f(1.0f, 1.0f, 1.0f);
+
+        float ni_over_nt;
+        float cosine;
+
+        if (hit.front_face) {
+            // Ray is entering the material (air -> dielectric)
+            ni_over_nt = 1.0f / ior;
+            cosine = -ray.direction.Dot(hit.normal);
+        } else {
+            // Ray is exiting the material (dielectric -> air)
+            ni_over_nt = ior;
+            cosine = ray.direction.Dot(hit.normal);
+        }
+
         Vec3f refracted;
-        float reflect_prob;
-        float cosine = hit.normal.Dot(-ray.direction);
+        bool can_refract = Refract(ray.direction, hit.normal, ni_over_nt, refracted);
+        Vec3f reflected = ray.direction.Reflect(hit.normal);
+        float reflectance = Reflectance(abs(cosine), ior);
 
-        if (Refract(ray.direction, hit.normal, ni_over_nt, refracted)) {
-            reflect_prob = Schlick(cosine);
+        if (!can_refract || RandomFloat(random_state) < reflectance) {
+            Vec3f final_direction = AddDiffusion(reflected, reflection_smoothness, random_state);
+            scattered = Rayf(hit.point, final_direction);
         } else {
-            reflect_prob = 1.0f;
+            Vec3f final_direction = AddDiffusion(refracted, refraction_smoothness, random_state);
+            scattered = Rayf(hit.point, final_direction);
         }
 
-        if (RandomFloat(random_state) < reflect_prob) {
-            scattered = Rayf(hit.point, reflected);
-        } else {
-            scattered = Rayf(hit.point, refracted);
-        }
-
-        attenuation = albedo;
         return true;
     }
 };
@@ -95,8 +129,6 @@ struct Emissive {
 
     DEVICE_HOST
     Emissive(const Vec3f& albedo, float intensity) : albedo(albedo), intensity(intensity) {}
-    Emissive(const Emissive& other) = default;
-    Emissive(Emissive&& other) = default;
 
     DEVICE
     bool Scatter(const Rayf& ray, const Hit& hit, Vec3f& attenuation, Rayf& scattered,
@@ -106,8 +138,9 @@ struct Emissive {
     }
 };
 
-struct Material : public Managed, public cuda::std::variant<Metal, Dielectric, Emissive> {
-    using Base = cuda::std::variant<Metal, Dielectric, Emissive>;
+struct Material : public Managed,
+                  public cuda::std::variant<Lambertian, Metal, Dielectric, Emissive> {
+    using Base = cuda::std::variant<Lambertian, Metal, Dielectric, Emissive>;
     using Base::Base;
 
     DEVICE

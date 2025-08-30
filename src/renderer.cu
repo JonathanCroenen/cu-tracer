@@ -28,14 +28,16 @@ KERNEL void RenderKernel(cudaSurfaceObject_t surface, int width, int height, con
 
     Vec3f color = Vec3f(0.0f, 0.0f, 0.0f);
     for (int i = 0; i < rays_per_pixel; i++) {
-        float u = (float(x) + RandomFloat(local_state)) / float(width - 1);
-        float v = (float(y) + RandomFloat(local_state)) / float(height - 1);
+        float u = (float(x) + RandomFloat(local_state)) / float(width);
+        float v = (float(y) + RandomFloat(local_state)) / float(height);
 
         Rayf ray = scene.GetCameraRay(u, v);
         color += TraceRay(ray, scene, max_bounces, local_state);
     }
 
     color /= float(rays_per_pixel);
+    color = color.Clamped(0.0f, 1.0f);
+    color = Vec3f(sqrt(color.x), sqrt(color.y), sqrt(color.z));
 
     int pixel_index = y * width + x;
     accumulated_colors[pixel_index] = accumulated_colors[pixel_index] + color;
