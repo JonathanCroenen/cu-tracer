@@ -1,7 +1,7 @@
 #pragma once
 
-#include "math.hu"
-#include "ray.hu"
+#include "math.cuh"
+#include "ray.cuh"
 
 namespace rt {
 
@@ -14,7 +14,7 @@ struct Hit {
     bool front_face;
     Material* material;
 
-    DEVICE
+    DEVICE_HOST
     void SetFaceNormal(const Ray& ray, const Vec3f& outward_normal) {
         front_face = ray.direction.Dot(outward_normal) < 0;
         normal = front_face ? outward_normal : -outward_normal;

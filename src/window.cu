@@ -1,4 +1,4 @@
-#include "window.hu"
+#include "window.cuh"
 
 namespace rt {
 

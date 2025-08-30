@@ -1,11 +1,11 @@
 #pragma once
 
 #include <cuda/std/variant>
-#include "common.hu"
-#include "hit.hu"
-#include "managed.hu"
-#include "math.hu"
-#include "ray.hu"
+#include "common.cuh"
+#include "hit.cuh"
+#include "managed.cuh"
+#include "math.cuh"
+#include "ray.cuh"
 
 namespace rt {
 
@@ -13,19 +13,34 @@ struct Metal {
     Vec3f albedo;
     float fuzz;
 
+    DEVICE_HOST
+    Metal(const Vec3f& albedo, float fuzz) : albedo(albedo), fuzz(fuzz) {}
+    Metal(const Metal& other) = default;
+    Metal(Metal&& other) = default;
+
     DEVICE
     bool Scatter(const Rayf& ray, const Hit& hit, Vec3f& attenuation, Rayf& scattered,
                  curandState* random_state) const {
         Vec3f reflected = ray.direction.Reflect(hit.normal);
         scattered = Rayf(hit.point, reflected + fuzz * RandomUnitVector(random_state));
-        attenuation = albedo;
-        return scattered.direction.Dot(hit.normal) > 0;
+        if (scattered.direction.Dot(hit.normal) > 0) {
+            attenuation = albedo;
+            return true;
+        }
+
+        return false;
     }
 };
 
 struct Dielectric {
-    float refractive_index;
     Vec3f albedo;
+    float refractive_index;
+
+    DEVICE_HOST
+    Dielectric(const Vec3f& albedo, float refractive_index)
+        : albedo(albedo), refractive_index(refractive_index) {}
+    Dielectric(const Dielectric& other) = default;
+    Dielectric(Dielectric&& other) = default;
 
     DEVICE
     float Schlick(float cosine) const {
@@ -74,23 +89,35 @@ struct Dielectric {
     }
 };
 
-struct Material : public Managed {
-    cuda::std::variant<Metal, Dielectric> material;
+struct Emissive {
+    Vec3f albedo;
+    float intensity;
 
     DEVICE_HOST
-    Material(Metal metal) : material(metal) {}
+    Emissive(const Vec3f& albedo, float intensity) : albedo(albedo), intensity(intensity) {}
+    Emissive(const Emissive& other) = default;
+    Emissive(Emissive&& other) = default;
 
-    DEVICE_HOST
-    Material(Dielectric dielectric) : material(dielectric) {}
+    DEVICE
+    bool Scatter(const Rayf& ray, const Hit& hit, Vec3f& attenuation, Rayf& scattered,
+                 curandState* random_state) const {
+        attenuation = albedo * intensity;
+        return false;
+    }
+};
+
+struct Material : public Managed, public cuda::std::variant<Metal, Dielectric, Emissive> {
+    using Base = cuda::std::variant<Metal, Dielectric, Emissive>;
+    using Base::Base;
 
     DEVICE
     bool Scatter(const Rayf& ray, const Hit& hit, Vec3f& attenuation, Rayf& scattered,
                  curandState* random_state) const {
         return cuda::std::visit(
-            [&](auto&& material) {
+            [&](auto&& material) -> bool {
                 return material.Scatter(ray, hit, attenuation, scattered, random_state);
             },
-            material);
+            *this);
     }
 };
 

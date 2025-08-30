@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set CUDA standard
-set(CMAKE_CUDA_STANDARD 17)
+set(CMAKE_CUDA_STANDARD 20)
 set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 # Set compiler flags
@@ -75,7 +75,7 @@ target_link_libraries(${PROJECT_NAME}
 # Set CUDA flags
 set_target_properties(${PROJECT_NAME} PROPERTIES
     CUDA_SEPARABLE_COMPILATION ON
-    CUDA_ARCHITECTURES "75;80"
+    CUDA_ARCHITECTURES "75"
 )
 
 # Enable CUDA OpenGL interop and configure GLAD

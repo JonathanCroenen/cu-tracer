@@ -1,6 +1,6 @@
 #pragma once
 
-#include "math.hu"
+#include "math.cuh"
 
 namespace rt {
 

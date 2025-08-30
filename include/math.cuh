@@ -2,12 +2,11 @@
 
 #include <cuda_runtime.h>
 #include <curand_kernel.h>
-#include <algorithm>
-#include <cmath>
-#include <iostream>
-#include "common.hu"
+#include "common.cuh"
 
 namespace rt {
+
+constexpr float epsilon = 1e-6f;
 
 // Forward declarations
 template <typename T>
@@ -97,6 +96,28 @@ struct Vec2 {
     DEVICE_HOST Vec2<T>& operator/=(const Vec2<T>& other) {
         x /= other.x;
         y /= other.y;
+        return *this;
+    }
+
+    // Compound assignment with scalar
+    DEVICE_HOST Vec2<T>& operator+=(T scalar) {
+        x += scalar;
+        y += scalar;
+        return *this;
+    }
+    DEVICE_HOST Vec2<T>& operator-=(T scalar) {
+        x -= scalar;
+        y -= scalar;
+        return *this;
+    }
+    DEVICE_HOST Vec2<T>& operator*=(T scalar) {
+        x *= scalar;
+        y *= scalar;
+        return *this;
+    }
+    DEVICE_HOST Vec2<T>& operator/=(T scalar) {
+        x /= scalar;
+        y /= scalar;
         return *this;
     }
 
@@ -196,6 +217,32 @@ struct Vec3 {
         x /= other.x;
         y /= other.y;
         z /= other.z;
+        return *this;
+    }
+
+    // Compound assignment with scalar
+    DEVICE_HOST Vec3<T>& operator+=(T scalar) {
+        x += scalar;
+        y += scalar;
+        z += scalar;
+        return *this;
+    }
+    DEVICE_HOST Vec3<T>& operator-=(T scalar) {
+        x -= scalar;
+        y -= scalar;
+        z -= scalar;
+        return *this;
+    }
+    DEVICE_HOST Vec3<T>& operator*=(T scalar) {
+        x *= scalar;
+        y *= scalar;
+        z *= scalar;
+        return *this;
+    }
+    DEVICE_HOST Vec3<T>& operator/=(T scalar) {
+        x /= scalar;
+        y /= scalar;
+        z /= scalar;
         return *this;
     }
 
@@ -317,6 +364,36 @@ struct Vec4 {
         y /= other.y;
         z /= other.z;
         w /= other.w;
+        return *this;
+    }
+
+    // Compound assignment with scalar
+    DEVICE_HOST Vec4<T>& operator+=(T scalar) {
+        x += scalar;
+        y += scalar;
+        z += scalar;
+        w += scalar;
+        return *this;
+    }
+    DEVICE_HOST Vec4<T>& operator-=(T scalar) {
+        x -= scalar;
+        y -= scalar;
+        z -= scalar;
+        w -= scalar;
+        return *this;
+    }
+    DEVICE_HOST Vec4<T>& operator*=(T scalar) {
+        x *= scalar;
+        y *= scalar;
+        z *= scalar;
+        w *= scalar;
+        return *this;
+    }
+    DEVICE_HOST Vec4<T>& operator/=(T scalar) {
+        x /= scalar;
+        y /= scalar;
+        z /= scalar;
+        w /= scalar;
         return *this;
     }
 

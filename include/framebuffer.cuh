@@ -1,6 +1,6 @@
 #pragma once
 
-#include "common.hu"
+#include "common.cuh"
 
 namespace rt {
 

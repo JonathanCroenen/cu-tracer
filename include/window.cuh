@@ -6,7 +6,7 @@
 #include <GLFW/glfw3.h>
 #include <cuda_gl_interop.h>
 #include <iostream>
-#include "framebuffer.hu"
+#include "framebuffer.cuh"
 
 namespace rt {
 

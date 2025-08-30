@@ -1,11 +1,11 @@
 #include <cuda_gl_interop.h>
-#include "common.hu"
-#include "framebuffer.hu"
-#include "renderer.hu"
+#include "common.cuh"
+#include "framebuffer.cuh"
+#include "renderer.cuh"
 
 namespace rt {
 
-DEVICE Vec3f TraceRay(const Rayf& ray, const Sphere* spheres, int num_spheres, int max_bounces,
+DEVICE Vec3f TraceRay(const Rayf& ray, const Scene& scene, int max_bounces,
                       curandState* random_state);
 
 KERNEL void InitRandomStatesKernel(curandState* random_states, int num_states,
@@ -16,9 +16,9 @@ KERNEL void InitRandomStatesKernel(curandState* random_states, int num_states,
     }
 }
 
-KERNEL void RenderKernel(cudaSurfaceObject_t surface, int width, int height, Camera camera,
-                         const Sphere* spheres, int num_spheres, int max_bounces,
-                         curandState* random_states, Vec3f* accumulated_colors, int sample_count) {
+KERNEL void RenderKernel(cudaSurfaceObject_t surface, int width, int height, const Scene& scene,
+                         int rays_per_pixel, int max_bounces, curandState* random_states,
+                         Vec3f* accumulated_colors, int sample_count) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -26,12 +26,16 @@ KERNEL void RenderKernel(cudaSurfaceObject_t surface, int width, int height, Cam
 
     curandState* local_state = &random_states[y * width + x];
 
-    // Convert pixel coordinates to UV coordinates
-    float u = float(x) / float(width - 1);
-    float v = float(height - 1 - y) / float(height - 1);
+    Vec3f color = Vec3f(0.0f, 0.0f, 0.0f);
+    for (int i = 0; i < rays_per_pixel; i++) {
+        float u = (float(x) + RandomFloat(local_state)) / float(width - 1);
+        float v = (float(y) + RandomFloat(local_state)) / float(height - 1);
 
-    Rayf ray = camera.GetRay(u, v);
-    Vec3f color = TraceRay(ray, spheres, num_spheres, max_bounces, local_state);
+        Rayf ray = scene.GetCameraRay(u, v);
+        color += TraceRay(ray, scene, max_bounces, local_state);
+    }
+
+    color /= float(rays_per_pixel);
 
     int pixel_index = y * width + x;
     accumulated_colors[pixel_index] = accumulated_colors[pixel_index] + color;
@@ -41,42 +45,37 @@ KERNEL void RenderKernel(cudaSurfaceObject_t surface, int width, int height, Cam
                 x * sizeof(float4), y);
 }
 
-DEVICE Vec3f TraceRay(const Rayf& initial_ray, const Sphere* spheres, int num_spheres,
-                      int max_bounces, curandState* random_state) {
+DEVICE Vec3f TraceRay(const Rayf& initial_ray, const Scene& scene, int max_bounces,
+                      curandState* random_state) {
     Rayf ray = initial_ray;
-    Vec3f final_attenuation(1.0f, 1.0f, 1.0f);
+    Vec3f throughput(1.0f, 1.0f, 1.0f);
 
     for (int bounce = 0; bounce < max_bounces; ++bounce) {
-        bool found_hit = false;
         Hit hit;
-        for (int i = 0; i < num_spheres; i++) {
-            if ((found_hit = spheres[i].Hit(ray, 0.001f, INFINITY, hit))) {
-                break;
-            }
-        }
-
-        if (found_hit) {
+        if (scene.Hit(ray, hit)) {
             Rayf scattered;
-            Vec3f attenuation;
+            Vec3f attenuation(0.0f);
             if (hit.material->Scatter(ray, hit, attenuation, scattered, random_state)) {
                 ray = scattered;
-                final_attenuation *= attenuation;
-            } else {
-                return final_attenuation;
+                throughput *= attenuation;
+                continue;
             }
+
+            return throughput * attenuation;
         } else {
             float t = 0.5f * (ray.direction.y + 1.0f);
-            Vec3f sky_color = Vec3f(1.0f, 1.0f, 1.0f) * (1.0f - t) + Vec3f(0.5f, 0.7f, 1.0f) * t;
-            return final_attenuation * sky_color;
+            Vec3f sky_color = Vec3f(0.7f, 0.7f, 0.7f) * (1.0f - t) + Vec3f(0.2f, 0.3f, 0.7f) * t;
+            return throughput * sky_color;
+            // return Vec3f(0.0f, 0.0f, 0.0f);
         }
     }
 
     return Vec3f(0, 0, 0);
 }
 
-Renderer::Renderer(int w, int h, int max_bounces)
-    : width(w), height(h), max_bounces(max_bounces), sample_count(0),
-      _device_random_states(nullptr), _device_accumulator(nullptr) {}
+Renderer::Renderer(int w, int h, int rays_per_pixel, int max_bounces)
+    : width(w), height(h), rays_per_pixel(rays_per_pixel), max_bounces(max_bounces),
+      sample_count(0), _device_random_states(nullptr), _device_accumulator(nullptr) {}
 
 Renderer::~Renderer() {
     Cleanup();
@@ -114,8 +113,7 @@ void Renderer::ClearAccumulator() {
     sample_count = 0;
 }
 
-void Renderer::RenderFrame(Framebuffer& framebuffer, const Camera& camera, const Sphere* spheres,
-                           int num_spheres) {
+void Renderer::RenderFrame(Framebuffer& framebuffer, const Scene& scene) {
     sample_count++;
     framebuffer.Map();
 
@@ -124,8 +122,8 @@ void Renderer::RenderFrame(Framebuffer& framebuffer, const Camera& camera, const
     dim3 gridSize((width + blockSize.x - 1) / blockSize.x,
                   (height + blockSize.y - 1) / blockSize.y);
 
-    RenderKernel<<<gridSize, blockSize>>>(framebuffer.GetSurface(), width, height, camera, spheres,
-                                          num_spheres, max_bounces, _device_random_states,
+    RenderKernel<<<gridSize, blockSize>>>(framebuffer.GetSurface(), width, height, scene,
+                                          rays_per_pixel, max_bounces, _device_random_states,
                                           _device_accumulator, sample_count);
 
     framebuffer.Unmap();
