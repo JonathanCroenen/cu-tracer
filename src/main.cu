@@ -14,9 +14,9 @@ std::unique_ptr<rt::Scene> CreateRTInOneWeekendScene() {
     auto scene = rt::Scene::Create();
     rt::MaterialRef ground = scene->AddMaterial(rt::Lambertian(rt::Vec3f(0.8f, 0.8f, 0.0f)));
     rt::MaterialRef center = scene->AddMaterial(rt::Metal(rt::Vec3f(0.1f, 0.2f, 0.5f), 1.0f));
-    // Clear glass with slight surface imperfections
+    // Clear glass with slight surface imperfections (no absorption)
     rt::MaterialRef left = scene->AddMaterial(rt::Dielectric(1.5f, 0.02f, 0.01f));
-    // Bubble with very smooth surfaces
+    // Bubble with very smooth surfaces (no absorption)
     rt::MaterialRef bubble = scene->AddMaterial(rt::Dielectric(1.0f / 1.5f, 0.0f, 0.0f));
     rt::MaterialRef right = scene->AddMaterial(rt::Metal(rt::Vec3f(0.8f, 0.6f, 0.2f), 0.0f));
 
@@ -44,8 +44,11 @@ std::unique_ptr<rt::Scene> CreateCornellBoxScene() {
     rt::MaterialRef white = scene->AddMaterial(rt::Lambertian(rt::Vec3f(0.73f, 0.73f, 0.73f)));
     rt::MaterialRef light = scene->AddMaterial(rt::Emissive(rt::Vec3f(1.0f, 1.0f, 1.0f), 10.0f));
     rt::MaterialRef metal = scene->AddMaterial(rt::Metal(rt::Vec3f(0.8f, 0.85f, 0.88f), 0.0f));
-    // Clear glass with slight surface roughness
+    // Clear glass with slight surface roughness (no absorption)
     rt::MaterialRef glass = scene->AddMaterial(rt::Dielectric(1.5f, 0.03f, 0.02f));
+    // Colored glass with absorption (green tint)
+    rt::MaterialRef colored_glass =
+        scene->AddMaterial(rt::Dielectric(1.5f, 0.01f, 0.01f, rt::Vec3f(0.1f, 0.05f, 1.0f), 9.0f));
     rt::MaterialRef fuzz = scene->AddMaterial(rt::Metal(rt::Vec3f(0.8f, 0.6f, 0.2f), 0.6f));
 
     scene->AddObject(rt::Plane(rt::Vec3f(0.0f, -0.5f, 0.0f), rt::Vec3f(0.0f, 1.0f, 0.0f)), white);
@@ -57,8 +60,9 @@ std::unique_ptr<rt::Scene> CreateCornellBoxScene() {
     scene->AddObject(rt::Sphere(rt::Vec3f(0.0f, 1.09f, 0.0f), 0.6f), light);
     scene->AddObject(rt::Sphere(rt::Vec3f(0.0f, 0.2f, -0.6f), 0.1f), metal);
     scene->AddObject(rt::Sphere(rt::Vec3f(-0.2f, -0.15f, 0.0f), 0.12f), glass);
-    scene->AddObject(rt::Sphere(rt::Vec3f(0.0f, 0.0f, 1.8f), 0.12f), glass);
+    scene->AddObject(rt::Sphere(rt::Vec3f(0.0f, -0.4f, 0.5f), 0.1f), colored_glass);
     scene->AddObject(rt::Sphere(rt::Vec3f(0.2f, -0.35f, -0.3f), 0.1f), fuzz);
+
     scene->SetCamera(rt::Camera(rt::Vec3f(0.0f, 0.0f, 2.5f),  // look from
                                 rt::Vec3f(0.0f, 0.0f, 0.0f),  // look at
                                 rt::Vec3f(0.0f, 1.0f, 0.0f),  // up

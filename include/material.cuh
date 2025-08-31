@@ -27,16 +27,16 @@ struct Lambertian {
 
 struct Metal {
     Vec3f albedo;
-    float fuzz;
+    float smoothness;
 
     DEVICE_HOST
-    Metal(const Vec3f& albedo, float fuzz) : albedo(albedo), fuzz(fuzz) {}
+    Metal(const Vec3f& albedo, float smoothness) : albedo(albedo), smoothness(smoothness) {}
 
     DEVICE
     bool Scatter(const Rayf& ray, const Hit& hit, Vec3f& attenuation, Rayf& scattered,
                  curandState* random_state) const {
         Vec3f reflected = ray.direction.Reflect(hit.normal);
-        scattered = Rayf(hit.point, reflected + fuzz * RandomUnitVector(random_state));
+        scattered = Rayf(hit.point, reflected + smoothness * RandomUnitVector(random_state));
         if (scattered.direction.Dot(hit.normal) > 0) {
             attenuation = albedo;
             return true;
@@ -47,14 +47,19 @@ struct Metal {
 };
 
 struct Dielectric {
-    float ior;                    // Index of refraction
-    float reflection_smoothness;  // Controls diffusion of reflected rays
-    float refraction_smoothness;  // Controls diffusion of refracted rays
+    float ior;
+    float reflection_smoothness;
+    float refraction_smoothness;
+    Vec3f absorption_color;
+    float absorption_factor;
 
     DEVICE_HOST
-    Dielectric(float refractive_index, float refl_smoothness = 0.0f, float refr_smoothness = 0.0f)
+    Dielectric(float refractive_index, float refl_smoothness = 0.0f, float refr_smoothness = 0.0f,
+               const Vec3f& absorption_color = Vec3f(0.0f, 0.0f, 0.0f),
+               const float absorption_factor = 1.0f)
         : ior(refractive_index), reflection_smoothness(refl_smoothness),
-          refraction_smoothness(refr_smoothness) {}
+          refraction_smoothness(refr_smoothness), absorption_color(absorption_color),
+          absorption_factor(absorption_factor) {}
 
     DEVICE
     static float Reflectance(float cosine, float ior) {
@@ -81,6 +86,14 @@ struct Dielectric {
     }
 
     DEVICE
+    Vec3f ApplyAbsorption(float distance) const {
+        // Beer's Law: I(d) = I₀ * e^(-αd)
+        return Vec3f(exp(-absorption_color.x * distance * absorption_factor),
+                     exp(-absorption_color.y * distance * absorption_factor),
+                     exp(-absorption_color.z * distance * absorption_factor));
+    }
+
+    DEVICE
     static Vec3f AddDiffusion(const Vec3f& direction, float smoothness, curandState* random_state) {
         if (smoothness <= 0.0f) return direction;
 
@@ -91,7 +104,11 @@ struct Dielectric {
     DEVICE
     bool Scatter(const Rayf& ray, const Hit& hit, Vec3f& attenuation, Rayf& scattered,
                  curandState* random_state) const {
-        attenuation = Vec3f(1.0f, 1.0f, 1.0f);
+        if (hit.front_face) {
+            attenuation = Vec3f(1.0f, 1.0f, 1.0f);
+        } else {
+            attenuation = ApplyAbsorption(hit.t);
+        }
 
         float ni_over_nt;
         float cosine;
