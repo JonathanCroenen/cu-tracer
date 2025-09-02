@@ -20,9 +20,28 @@ struct Mat3;
 template <typename T>
 struct Mat4;
 template <typename T>
+struct Ray;
+template <typename T>
 struct Transform;
 
-// Type aliases for common use cases
+// ============================================================================
+// RAY CLASS
+// ============================================================================
+
+template <typename T>
+struct Ray {
+    Vec3<T> origin;
+    Vec3<T> direction;
+
+    DEVICE_HOST Ray() : origin(0), direction(0, 0, 1) {}
+    DEVICE_HOST Ray(const Vec3<T>& o, const Vec3<T>& d) : origin(o), direction(d.Normalized()) {}
+
+    DEVICE_HOST Vec3<T> At(T t) const { return origin + direction * t; }
+};
+
+// ============================================================================
+// TYPE ALIASES
+// ============================================================================
 using Vec2f = Vec2<float>;
 using Vec3f = Vec3<float>;
 using Vec4f = Vec4<float>;
@@ -37,6 +56,9 @@ using Mat4d = Mat4<double>;
 
 using Transformf = Transform<float>;
 using Transformd = Transform<double>;
+
+using Rayf = Ray<float>;
+using Rayd = Ray<double>;
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -95,18 +117,10 @@ struct Vec2 {
         return Vec2<T>(x / other.x, y / other.y);
     }
 
-    DEVICE_HOST Vec2<T> operator+(T scalar) const {
-        return Vec2<T>(x + scalar, y + scalar);
-    }
-    DEVICE_HOST Vec2<T> operator-(T scalar) const {
-        return Vec2<T>(x - scalar, y - scalar);
-    }
-    DEVICE_HOST Vec2<T> operator*(T scalar) const {
-        return Vec2<T>(x * scalar, y * scalar);
-    }
-    DEVICE_HOST Vec2<T> operator/(T scalar) const {
-        return Vec2<T>(x / scalar, y / scalar);
-    }
+    DEVICE_HOST Vec2<T> operator+(T scalar) const { return Vec2<T>(x + scalar, y + scalar); }
+    DEVICE_HOST Vec2<T> operator-(T scalar) const { return Vec2<T>(x - scalar, y - scalar); }
+    DEVICE_HOST Vec2<T> operator*(T scalar) const { return Vec2<T>(x * scalar, y * scalar); }
+    DEVICE_HOST Vec2<T> operator/(T scalar) const { return Vec2<T>(x / scalar, y / scalar); }
 
     // Compound assignment
     DEVICE_HOST Vec2<T>& operator+=(const Vec2<T>& other) {
@@ -153,28 +167,16 @@ struct Vec2 {
     }
 
     // Unary operators
-    DEVICE_HOST Vec2<T> operator-() const {
-        return Vec2<T>(-x, -y);
-    }
+    DEVICE_HOST Vec2<T> operator-() const { return Vec2<T>(-x, -y); }
 
     // Access operators
-    DEVICE_HOST T& operator[](int i) {
-        return (&x)[i];
-    }
-    DEVICE_HOST const T& operator[](int i) const {
-        return (&x)[i];
-    }
+    DEVICE_HOST T& operator[](int i) { return (&x)[i]; }
+    DEVICE_HOST const T& operator[](int i) const { return (&x)[i]; }
 
     // Utility functions
-    DEVICE_HOST T Dot(const Vec2<T>& other) const {
-        return x * other.x + y * other.y;
-    }
-    DEVICE_HOST T LengthSquared() const {
-        return x * x + y * y;
-    }
-    DEVICE_HOST T Length() const {
-        return sqrt(LengthSquared());
-    }
+    DEVICE_HOST T Dot(const Vec2<T>& other) const { return x * other.x + y * other.y; }
+    DEVICE_HOST T LengthSquared() const { return x * x + y * y; }
+    DEVICE_HOST T Length() const { return sqrt(LengthSquared()); }
     DEVICE_HOST Vec2<T> Normalized() const {
         T len = Length();
         return len > 0 ? *this / len : *this;
@@ -185,12 +187,8 @@ struct Vec2 {
     }
 
     // Static constructors
-    DEVICE_HOST static Vec2<T> Zero() {
-        return Vec2<T>(0, 0);
-    }
-    DEVICE_HOST static Vec2<T> One() {
-        return Vec2<T>(1, 1);
-    }
+    DEVICE_HOST static Vec2<T> Zero() { return Vec2<T>(0, 0); }
+    DEVICE_HOST static Vec2<T> One() { return Vec2<T>(1, 1); }
 };
 
 template <typename T>
@@ -282,17 +280,11 @@ struct Vec3 {
     }
 
     // Unary operators
-    DEVICE_HOST Vec3<T> operator-() const {
-        return Vec3<T>(-x, -y, -z);
-    }
+    DEVICE_HOST Vec3<T> operator-() const { return Vec3<T>(-x, -y, -z); }
 
     // Access operators
-    DEVICE_HOST T& operator[](int i) {
-        return (&x)[i];
-    }
-    DEVICE_HOST const T& operator[](int i) const {
-        return (&x)[i];
-    }
+    DEVICE_HOST T& operator[](int i) { return (&x)[i]; }
+    DEVICE_HOST const T& operator[](int i) const { return (&x)[i]; }
 
     // Utility functions
     DEVICE_HOST T Dot(const Vec3<T>& other) const {
@@ -302,12 +294,8 @@ struct Vec3 {
         return Vec3<T>(y * other.z - z * other.y, z * other.x - x * other.z,
                        x * other.y - y * other.x);
     }
-    DEVICE_HOST T LengthSquared() const {
-        return x * x + y * y + z * z;
-    }
-    DEVICE_HOST T Length() const {
-        return sqrt(LengthSquared());
-    }
+    DEVICE_HOST T LengthSquared() const { return x * x + y * y + z * z; }
+    DEVICE_HOST T Length() const { return sqrt(LengthSquared()); }
     DEVICE_HOST Vec3<T> Normalized() const {
         T len = Length();
         return len > 0 ? *this / len : *this;
@@ -322,21 +310,11 @@ struct Vec3 {
     }
 
     // Static constructors
-    DEVICE_HOST static Vec3<T> Zero() {
-        return Vec3<T>(0, 0, 0);
-    }
-    DEVICE_HOST static Vec3<T> One() {
-        return Vec3<T>(1, 1, 1);
-    }
-    DEVICE_HOST static Vec3<T> UnitX() {
-        return Vec3<T>(1, 0, 0);
-    }
-    DEVICE_HOST static Vec3<T> UnitY() {
-        return Vec3<T>(0, 1, 0);
-    }
-    DEVICE_HOST static Vec3<T> UnitZ() {
-        return Vec3<T>(0, 0, 1);
-    }
+    DEVICE_HOST static Vec3<T> Zero() { return Vec3<T>(0, 0, 0); }
+    DEVICE_HOST static Vec3<T> One() { return Vec3<T>(1, 1, 1); }
+    DEVICE_HOST static Vec3<T> UnitX() { return Vec3<T>(1, 0, 0); }
+    DEVICE_HOST static Vec3<T> UnitY() { return Vec3<T>(0, 1, 0); }
+    DEVICE_HOST static Vec3<T> UnitZ() { return Vec3<T>(0, 0, 1); }
 };
 
 template <typename T>
@@ -437,28 +415,18 @@ struct Vec4 {
     }
 
     // Unary operators
-    DEVICE_HOST Vec4<T> operator-() const {
-        return Vec4<T>(-x, -y, -z, -w);
-    }
+    DEVICE_HOST Vec4<T> operator-() const { return Vec4<T>(-x, -y, -z, -w); }
 
     // Access operators
-    DEVICE_HOST T& operator[](int i) {
-        return (&x)[i];
-    }
-    DEVICE_HOST const T& operator[](int i) const {
-        return (&x)[i];
-    }
+    DEVICE_HOST T& operator[](int i) { return (&x)[i]; }
+    DEVICE_HOST const T& operator[](int i) const { return (&x)[i]; }
 
     // Utility functions
     DEVICE_HOST T Dot(const Vec4<T>& other) const {
         return x * other.x + y * other.y + z * other.z + w * other.w;
     }
-    DEVICE_HOST T LengthSquared() const {
-        return x * x + y * y + z * z + w * w;
-    }
-    DEVICE_HOST T Length() const {
-        return sqrt(LengthSquared());
-    }
+    DEVICE_HOST T LengthSquared() const { return x * x + y * y + z * z + w * w; }
+    DEVICE_HOST T Length() const { return sqrt(LengthSquared()); }
     DEVICE_HOST Vec4<T> Normalized() const {
         T len = Length();
         return len > 0 ? *this / len : *this;
@@ -470,24 +438,12 @@ struct Vec4 {
     }
 
     // Static constructors
-    DEVICE_HOST static Vec4<T> Zero() {
-        return Vec4<T>(0, 0, 0, 0);
-    }
-    DEVICE_HOST static Vec4<T> One() {
-        return Vec4<T>(1, 1, 1, 1);
-    }
-    DEVICE_HOST static Vec4<T> UnitX() {
-        return Vec4<T>(1, 0, 0, 0);
-    }
-    DEVICE_HOST static Vec4<T> UnitY() {
-        return Vec4<T>(0, 1, 0, 0);
-    }
-    DEVICE_HOST static Vec4<T> UnitZ() {
-        return Vec4<T>(0, 0, 1, 0);
-    }
-    DEVICE_HOST static Vec4<T> UnitW() {
-        return Vec4<T>(0, 0, 0, 1);
-    }
+    DEVICE_HOST static Vec4<T> Zero() { return Vec4<T>(0, 0, 0, 0); }
+    DEVICE_HOST static Vec4<T> One() { return Vec4<T>(1, 1, 1, 1); }
+    DEVICE_HOST static Vec4<T> UnitX() { return Vec4<T>(1, 0, 0, 0); }
+    DEVICE_HOST static Vec4<T> UnitY() { return Vec4<T>(0, 1, 0, 0); }
+    DEVICE_HOST static Vec4<T> UnitZ() { return Vec4<T>(0, 0, 1, 0); }
+    DEVICE_HOST static Vec4<T> UnitW() { return Vec4<T>(0, 0, 0, 1); }
 };
 
 // ============================================================================
@@ -516,12 +472,8 @@ struct Mat3 {
         m[8] = m22;
     }
 
-    DEVICE_HOST T& operator()(int row, int col) {
-        return m[col * 3 + row];
-    }
-    DEVICE_HOST const T& operator()(int row, int col) const {
-        return m[col * 3 + row];
-    }
+    DEVICE_HOST T& operator()(int row, int col) { return m[col * 3 + row]; }
+    DEVICE_HOST const T& operator()(int row, int col) const { return m[col * 3 + row]; }
 
     // Matrix operations
     DEVICE_HOST Mat3<T> operator*(const Mat3<T>& other) const {
@@ -544,9 +496,7 @@ struct Mat3 {
     }
 
     // Static constructors
-    DEVICE_HOST static Mat3<T> Identity() {
-        return Mat3<T>();
-    }
+    DEVICE_HOST static Mat3<T> Identity() { return Mat3<T>(); }
 
     DEVICE_HOST static Mat3<T> RotationX(T angle) {
         T c = cos(angle);
@@ -601,12 +551,8 @@ struct Mat4 {
         m[15] = m33;
     }
 
-    DEVICE_HOST T& operator()(int row, int col) {
-        return m[col * 4 + row];
-    }
-    DEVICE_HOST const T& operator()(int row, int col) const {
-        return m[col * 4 + row];
-    }
+    DEVICE_HOST T& operator()(int row, int col) { return m[col * 4 + row]; }
+    DEVICE_HOST const T& operator()(int row, int col) const { return m[col * 4 + row]; }
 
     // Matrix operations
     DEVICE_HOST Mat4<T> operator*(const Mat4<T>& other) const {
@@ -655,10 +601,166 @@ struct Mat4 {
         return result;
     }
 
-    // Static constructors
-    DEVICE_HOST static Mat4<T> Identity() {
-        return Mat4<T>();
+    DEVICE_HOST Mat4<T> Inverse() const {
+        Mat4<T> result;
+        T det = Determinant();
+        if (fabs(det) < epsilon) {
+            return Identity();
+        }
+
+        T inv_det = 1.0f / det;
+
+        result(0, 0) = inv_det * ((*this)(1, 1) * (*this)(2, 2) * (*this)(3, 3) +
+                                  (*this)(1, 2) * (*this)(2, 3) * (*this)(3, 1) +
+                                  (*this)(1, 3) * (*this)(2, 1) * (*this)(3, 2) -
+                                  (*this)(1, 1) * (*this)(2, 3) * (*this)(3, 2) -
+                                  (*this)(1, 2) * (*this)(2, 1) * (*this)(3, 3) -
+                                  (*this)(1, 3) * (*this)(2, 2) * (*this)(3, 1));
+
+        result(0, 1) = inv_det * ((*this)(0, 1) * (*this)(2, 3) * (*this)(3, 2) +
+                                  (*this)(0, 2) * (*this)(2, 1) * (*this)(3, 3) +
+                                  (*this)(0, 3) * (*this)(2, 2) * (*this)(3, 1) -
+                                  (*this)(0, 1) * (*this)(2, 2) * (*this)(3, 3) -
+                                  (*this)(0, 2) * (*this)(2, 3) * (*this)(3, 1) -
+                                  (*this)(0, 3) * (*this)(2, 1) * (*this)(3, 2));
+
+        result(0, 2) = inv_det * ((*this)(0, 1) * (*this)(1, 2) * (*this)(3, 3) +
+                                  (*this)(0, 2) * (*this)(1, 3) * (*this)(3, 1) +
+                                  (*this)(0, 3) * (*this)(1, 1) * (*this)(3, 2) -
+                                  (*this)(0, 1) * (*this)(1, 3) * (*this)(3, 2) -
+                                  (*this)(0, 2) * (*this)(1, 1) * (*this)(3, 3) -
+                                  (*this)(0, 3) * (*this)(1, 2) * (*this)(3, 1));
+
+        result(0, 3) = inv_det * ((*this)(0, 1) * (*this)(1, 3) * (*this)(2, 2) +
+                                  (*this)(0, 2) * (*this)(1, 1) * (*this)(2, 3) +
+                                  (*this)(0, 3) * (*this)(1, 2) * (*this)(2, 1) -
+                                  (*this)(0, 1) * (*this)(1, 2) * (*this)(2, 3) -
+                                  (*this)(0, 2) * (*this)(1, 3) * (*this)(2, 1) -
+                                  (*this)(0, 3) * (*this)(1, 1) * (*this)(2, 2));
+
+        result(1, 0) = inv_det * ((*this)(1, 0) * (*this)(2, 3) * (*this)(3, 2) +
+                                  (*this)(1, 2) * (*this)(2, 0) * (*this)(3, 3) +
+                                  (*this)(1, 3) * (*this)(2, 2) * (*this)(3, 0) -
+                                  (*this)(1, 0) * (*this)(2, 2) * (*this)(3, 3) -
+                                  (*this)(1, 2) * (*this)(2, 3) * (*this)(3, 0) -
+                                  (*this)(1, 3) * (*this)(2, 0) * (*this)(3, 2));
+
+        result(1, 1) = inv_det * ((*this)(0, 0) * (*this)(2, 2) * (*this)(3, 3) +
+                                  (*this)(0, 2) * (*this)(2, 3) * (*this)(3, 0) +
+                                  (*this)(0, 3) * (*this)(2, 0) * (*this)(3, 2) -
+                                  (*this)(0, 0) * (*this)(2, 3) * (*this)(3, 2) -
+                                  (*this)(0, 2) * (*this)(2, 0) * (*this)(3, 3) -
+                                  (*this)(0, 3) * (*this)(2, 2) * (*this)(3, 0));
+
+        result(1, 2) = inv_det * ((*this)(0, 0) * (*this)(1, 3) * (*this)(3, 2) +
+                                  (*this)(0, 2) * (*this)(1, 0) * (*this)(3, 3) +
+                                  (*this)(0, 3) * (*this)(1, 2) * (*this)(3, 0) -
+                                  (*this)(0, 0) * (*this)(1, 2) * (*this)(3, 3) -
+                                  (*this)(0, 2) * (*this)(1, 3) * (*this)(3, 0) -
+                                  (*this)(0, 3) * (*this)(1, 0) * (*this)(3, 2));
+
+        result(1, 3) = inv_det * ((*this)(0, 0) * (*this)(1, 2) * (*this)(2, 3) +
+                                  (*this)(0, 2) * (*this)(1, 3) * (*this)(2, 0) +
+                                  (*this)(0, 3) * (*this)(1, 0) * (*this)(2, 2) -
+                                  (*this)(0, 0) * (*this)(1, 3) * (*this)(2, 2) -
+                                  (*this)(0, 2) * (*this)(1, 0) * (*this)(2, 3) -
+                                  (*this)(0, 3) * (*this)(1, 2) * (*this)(2, 0));
+
+        result(2, 0) = inv_det * ((*this)(1, 0) * (*this)(2, 1) * (*this)(3, 3) +
+                                  (*this)(1, 1) * (*this)(2, 3) * (*this)(3, 0) +
+                                  (*this)(1, 3) * (*this)(2, 0) * (*this)(3, 1) -
+                                  (*this)(1, 0) * (*this)(2, 3) * (*this)(3, 1) -
+                                  (*this)(1, 1) * (*this)(2, 0) * (*this)(3, 3) -
+                                  (*this)(1, 3) * (*this)(2, 1) * (*this)(3, 0));
+
+        result(2, 1) = inv_det * ((*this)(0, 0) * (*this)(2, 3) * (*this)(3, 1) +
+                                  (*this)(0, 1) * (*this)(2, 0) * (*this)(3, 3) +
+                                  (*this)(0, 3) * (*this)(2, 1) * (*this)(3, 0) -
+                                  (*this)(0, 0) * (*this)(2, 1) * (*this)(3, 3) -
+                                  (*this)(0, 1) * (*this)(2, 3) * (*this)(3, 0) -
+                                  (*this)(0, 3) * (*this)(2, 0) * (*this)(3, 1));
+
+        result(2, 2) = inv_det * ((*this)(0, 0) * (*this)(1, 1) * (*this)(3, 3) +
+                                  (*this)(0, 1) * (*this)(1, 3) * (*this)(3, 0) +
+                                  (*this)(0, 3) * (*this)(1, 0) * (*this)(3, 1) -
+                                  (*this)(0, 0) * (*this)(1, 3) * (*this)(3, 1) -
+                                  (*this)(0, 1) * (*this)(1, 0) * (*this)(3, 3) -
+                                  (*this)(0, 3) * (*this)(1, 1) * (*this)(3, 0));
+
+        result(2, 3) = inv_det * ((*this)(0, 0) * (*this)(1, 3) * (*this)(2, 1) +
+                                  (*this)(0, 1) * (*this)(1, 0) * (*this)(2, 3) +
+                                  (*this)(0, 3) * (*this)(1, 1) * (*this)(2, 0) -
+                                  (*this)(0, 0) * (*this)(1, 1) * (*this)(2, 3) -
+                                  (*this)(0, 1) * (*this)(1, 3) * (*this)(2, 0) -
+                                  (*this)(0, 3) * (*this)(1, 0) * (*this)(2, 1));
+
+        result(3, 0) = inv_det * ((*this)(1, 0) * (*this)(2, 2) * (*this)(3, 1) +
+                                  (*this)(1, 1) * (*this)(2, 0) * (*this)(3, 2) +
+                                  (*this)(1, 2) * (*this)(2, 1) * (*this)(3, 0) -
+                                  (*this)(1, 0) * (*this)(2, 1) * (*this)(3, 2) -
+                                  (*this)(1, 1) * (*this)(2, 2) * (*this)(3, 0) -
+                                  (*this)(1, 2) * (*this)(2, 0) * (*this)(3, 1));
+
+        result(3, 1) = inv_det * ((*this)(0, 0) * (*this)(2, 1) * (*this)(3, 2) +
+                                  (*this)(0, 1) * (*this)(2, 2) * (*this)(3, 0) +
+                                  (*this)(0, 2) * (*this)(2, 0) * (*this)(3, 1) -
+                                  (*this)(0, 0) * (*this)(2, 2) * (*this)(3, 1) -
+                                  (*this)(0, 1) * (*this)(2, 0) * (*this)(3, 2) -
+                                  (*this)(0, 2) * (*this)(2, 1) * (*this)(3, 0));
+
+        result(3, 2) = inv_det * ((*this)(0, 0) * (*this)(1, 2) * (*this)(3, 1) +
+                                  (*this)(0, 1) * (*this)(1, 0) * (*this)(3, 2) +
+                                  (*this)(0, 2) * (*this)(1, 1) * (*this)(3, 0) -
+                                  (*this)(0, 0) * (*this)(1, 1) * (*this)(3, 2) -
+                                  (*this)(0, 1) * (*this)(1, 2) * (*this)(3, 0) -
+                                  (*this)(0, 2) * (*this)(1, 0) * (*this)(3, 1));
+
+        result(3, 3) = inv_det * ((*this)(0, 0) * (*this)(1, 1) * (*this)(2, 2) +
+                                  (*this)(0, 1) * (*this)(1, 2) * (*this)(2, 0) +
+                                  (*this)(0, 2) * (*this)(1, 0) * (*this)(2, 1) -
+                                  (*this)(0, 0) * (*this)(1, 2) * (*this)(2, 1) -
+                                  (*this)(0, 1) * (*this)(1, 0) * (*this)(2, 2) -
+                                  (*this)(0, 2) * (*this)(1, 1) * (*this)(2, 0));
+
+        return result;
     }
+
+    DEVICE_HOST T Determinant() const {
+        T det = 0;
+
+        det += (*this)(0, 0) * ((*this)(1, 1) * (*this)(2, 2) * (*this)(3, 3) +
+                                (*this)(1, 2) * (*this)(2, 3) * (*this)(3, 1) +
+                                (*this)(1, 3) * (*this)(2, 1) * (*this)(3, 2) -
+                                (*this)(1, 1) * (*this)(2, 3) * (*this)(3, 2) -
+                                (*this)(1, 2) * (*this)(2, 1) * (*this)(3, 3) -
+                                (*this)(1, 3) * (*this)(2, 2) * (*this)(3, 1));
+
+        det -= (*this)(0, 1) * ((*this)(1, 0) * (*this)(2, 2) * (*this)(3, 3) +
+                                (*this)(1, 2) * (*this)(2, 3) * (*this)(3, 0) +
+                                (*this)(1, 3) * (*this)(2, 0) * (*this)(3, 2) -
+                                (*this)(1, 0) * (*this)(2, 3) * (*this)(3, 2) -
+                                (*this)(1, 2) * (*this)(2, 0) * (*this)(3, 3) -
+                                (*this)(1, 3) * (*this)(2, 2) * (*this)(3, 0));
+
+        det += (*this)(0, 2) * ((*this)(1, 0) * (*this)(2, 1) * (*this)(3, 3) +
+                                (*this)(1, 1) * (*this)(2, 3) * (*this)(3, 0) +
+                                (*this)(1, 3) * (*this)(2, 0) * (*this)(3, 1) -
+                                (*this)(1, 0) * (*this)(2, 3) * (*this)(3, 1) -
+                                (*this)(1, 1) * (*this)(2, 0) * (*this)(3, 3) -
+                                (*this)(1, 3) * (*this)(2, 1) * (*this)(3, 0));
+
+        det -= (*this)(0, 3) * ((*this)(1, 0) * (*this)(2, 1) * (*this)(3, 2) +
+                                (*this)(1, 1) * (*this)(2, 2) * (*this)(3, 0) +
+                                (*this)(1, 2) * (*this)(2, 0) * (*this)(3, 1) -
+                                (*this)(1, 0) * (*this)(2, 2) * (*this)(3, 1) -
+                                (*this)(1, 1) * (*this)(2, 0) * (*this)(3, 2) -
+                                (*this)(1, 2) * (*this)(2, 1) * (*this)(3, 0));
+
+        return det;
+    }
+
+    // Static constructors
+    DEVICE_HOST static Mat4<T> Identity() { return Mat4<T>(); }
 
     DEVICE_HOST static Mat4<T> Translation(T x, T y, T z) {
         Mat4<T> m = Identity();
@@ -765,8 +867,7 @@ struct Transform {
     Mat4<T> inverse_matrix;
 
     DEVICE_HOST Transform() : matrix(Mat4<T>::Identity()), inverse_matrix(Mat4<T>::Identity()) {}
-    DEVICE_HOST Transform(const Mat4<T>& m)
-        : matrix(m), inverse_matrix(m) { /* TODO: compute inverse */ }
+    DEVICE_HOST Transform(const Mat4<T>& m) : matrix(m), inverse_matrix(m.Inverse()) {}
 
     // Transform operations
     DEVICE_HOST Vec3<T> TransformPoint(const Vec3<T>& point) const {
@@ -776,13 +877,17 @@ struct Transform {
         return matrix.TransformVector(vector);
     }
     DEVICE_HOST Vec3<T> TransformNormal(const Vec3<T>& normal) const {
-        return inverse_matrix.Transpose().TransformVector(normal).normalized();
+        return inverse_matrix.Transpose().TransformVector(normal).Normalized();
+    }
+
+    // Ray transformation
+    DEVICE_HOST Ray<T> TransformRay(const Ray<T>& ray) const {
+        return Ray<T>(inverse_matrix.TransformPoint(ray.origin),
+                      inverse_matrix.TransformVector(ray.direction).Normalized());
     }
 
     // Static constructors
-    DEVICE_HOST static Transform<T> Identity() {
-        return Transform<T>();
-    }
+    DEVICE_HOST static Transform<T> Identity() { return Transform<T>(); }
 
     DEVICE_HOST static Transform<T> Translation(T x, T y, T z) {
         return Transform<T>(Mat4<T>::Translation(x, y, z));
@@ -803,6 +908,8 @@ struct Transform {
     DEVICE_HOST static Transform<T> Scaling(T sx, T sy, T sz) {
         return Transform<T>(Mat4<T>::Scaling(sx, sy, sz));
     }
+
+    DEVICE_HOST static Transform<T> Scaling(T s) { return Transform<T>(Mat4<T>::Scaling(s, s, s)); }
 
     DEVICE_HOST static Transform<T> LookAt(const Vec3<T>& eye, const Vec3<T>& target,
                                            const Vec3<T>& up) {

@@ -2,6 +2,8 @@
 
 #include <cuda_runtime.h>
 
+namespace rt {
+
 struct Managed {
     void* operator new(size_t size) {
         void* ptr;
@@ -9,7 +11,7 @@ struct Managed {
         return ptr;
     }
 
-    void operator delete(void* ptr) {
-        cudaFree(ptr);
-    }
+    void operator delete(void* ptr) { cudaFree(ptr); }
 };
+
+}  // namespace rt

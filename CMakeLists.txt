@@ -13,8 +13,14 @@ set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 
 # Set compiler flags
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g")
+
+set(CMAKE_CUDA_FLAGS "")
+set(CMAKE_CUDA_FLAGS_DEBUG "-O0 -g")
+set(CMAKE_CUDA_FLAGS_RELEASE "-O3 -Xptxas -O3")
+set(CMAKE_CUDA_FLAGS_RELWITHDEBINFO "-O2 -g -Xptxas -O2")
 
 # Disable response files so all compiler options appear in compile_commands.json
 set(CMAKE_CXX_USE_RESPONSE_FILE_FOR_INCLUDES OFF)
@@ -64,6 +70,8 @@ file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.cu")
 # Create executable
 add_executable(${PROJECT_NAME} ${SOURCES})
 
+
+
 # Link libraries
 target_link_libraries(${PROJECT_NAME} 
     OpenGL::GL 
@@ -83,3 +91,11 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     USE_CUDA_OPENGL_INTEROP
     GLAD_GL_IMPLEMENTATION
 )
+# Copy assets folder to build directory
+add_custom_target(copy_assets
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/assets
+    ${CMAKE_BINARY_DIR}/assets
+)
+
+add_dependencies(${PROJECT_NAME} copy_assets)

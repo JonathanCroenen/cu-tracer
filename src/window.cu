@@ -4,7 +4,7 @@ namespace rt {
 
 OpenGLCudaWindow::OpenGLCudaWindow(int w, int h)
     : width(w), height(h), _window(nullptr), _texture(0), _vao(0), _vbo(0), _shader_program(0),
-      _cuda_texture_resource(nullptr) {}
+      _cuda_texture_resource(nullptr), _current_time(0.0), _last_time(0.0), _delta_time(0.0) {}
 
 OpenGLCudaWindow::~OpenGLCudaWindow() {
     Cleanup();
@@ -162,6 +162,10 @@ bool OpenGLCudaWindow::_CreateShaders() {
 }
 
 void OpenGLCudaWindow::SwapBuffers() {
+    _last_time = _current_time;
+    _current_time = glfwGetTime();
+    _delta_time = _current_time - _last_time;
+
     glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(_shader_program);
 

@@ -7,7 +7,7 @@ namespace rt {
 
 struct Material;
 
-struct Hit {
+struct HitRecord {
     Vec3f point;
     Vec3f normal;
     float t;
@@ -15,7 +15,7 @@ struct Hit {
     Material* material;
 
     DEVICE_HOST
-    void SetFaceNormal(const Ray& ray, const Vec3f& outward_normal) {
+    void SetFaceNormal(const Rayf& ray, const Vec3f& outward_normal) {
         front_face = ray.direction.Dot(outward_normal) < 0;
         normal = front_face ? outward_normal : -outward_normal;
     }

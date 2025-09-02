@@ -21,7 +21,7 @@ namespace rt {
     } while (0)
 
 class OpenGLCudaWindow {
-   public:
+public:
     int width;
     int height;
 
@@ -34,11 +34,13 @@ class OpenGLCudaWindow {
     bool ShouldClose() const;
     void PollEvents();
     bool IsKeyPressed(int key) const;
-    Framebuffer& GetFramebuffer() {
-        return _framebuffer;
-    }
+    Framebuffer& GetFramebuffer() { return _framebuffer; }
 
-   private:
+    double GetDeltaTime() const { return _delta_time; }
+    double GetCurrentTime() const { return _current_time; }
+    double GetFPS() const { return _delta_time > 0.0 ? 1.0 / _delta_time : 0.0; }
+
+private:
     GLFWwindow* _window;
     GLuint _texture;
     GLuint _vao;
@@ -46,6 +48,10 @@ class OpenGLCudaWindow {
     GLuint _shader_program;
     cudaGraphicsResource_t _cuda_texture_resource;
     Framebuffer _framebuffer;
+
+    double _current_time;
+    double _last_time;
+    double _delta_time;
 
     bool _CreateShaders();
     void _CreateFullscreenQuad();
